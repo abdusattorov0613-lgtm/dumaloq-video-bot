@@ -78,8 +78,8 @@ TEXTS = {
         ),
         "btn_note": "🔵 Dumaloq video qilish (Video Note)",
         "btn_audio": "🎵 Ovozini ajratib olish (MP3)",
-        "note_processing": "⏳ <b>Dumaloq video tayyorlanmoqda...</b>",
-        "audio_processing": "🎶 <b>MP3 audio ajratib olinmoqda...</b>",
+        "note_processing": "⚡ <b>Dumaloq video tezkor tayyorlanmoqda...</b>",
+        "audio_processing": "⚡ <b>MP3 audio tezkor ajratib olinmoqda...</b>",
         "done_note": "✅ Dumaloq videongiz tayyor, <b>{name}</b>!",
         "done_audio": "🎵 Video audiosi (MP3) tayyor, <b>{name}</b>!",
         "err_msg": "❌ Videoni qayta ishlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
@@ -112,8 +112,8 @@ TEXTS = {
         ),
         "btn_note": "🔵 Сделать круглое видео (Video Note)",
         "btn_audio": "🎵 Извлечь звук (MP3)",
-        "note_processing": "⏳ <b>Круглое видео обрабатывается...</b>",
-        "audio_processing": "🎶 <b>Извлечение MP3 аудио...</b>",
+        "note_processing": "⚡ <b>Быстрое создание круглого видео...</b>",
+        "audio_processing": "⚡ <b>Быстрое извлечение MP3...</b>",
         "done_note": "✅ Ваше круглое видео готово, <b>{name}</b>!",
         "done_audio": "🎵 MP3 аудио из видео готово, <b>{name}</b>!",
         "err_msg": "❌ Ошибка при обработке видео. Попробуйте еще раз.",
@@ -146,8 +146,8 @@ TEXTS = {
         ),
         "btn_note": "🔵 Make Round Video (Video Note)",
         "btn_audio": "🎵 Extract Audio (MP3)",
-        "note_processing": "⏳ <b>Converting to round video...</b>",
-        "audio_processing": "🎶 <b>Extracting MP3 audio...</b>",
+        "note_processing": "⚡ <b>Fast converting to round video...</b>",
+        "audio_processing": "⚡ <b>Fast extracting MP3 audio...</b>",
         "done_note": "✅ Your round video is ready, <b>{name}</b>!",
         "done_audio": "🎵 Video audio (MP3) is ready, <b>{name}</b>!",
         "err_msg": "❌ Error processing video. Please try again.",
@@ -308,13 +308,11 @@ async def set_bot_commands(bot_obj: Bot):
 
 
 async def set_bot_description(bot_obj: Bot):
-    """Botga birinchi marta kirganda Start bosishdan oldin ko'rinadigan 'What can this bot do?' matnini o'rnatish"""
+    """Botga kirganda Start bosishdan oldin ko'rinadigan toza va londa 'What can this bot do?' tavsifini o'rnatish"""
     description_text = (
-        "<b>What can this bot do?</b>\n\n"
         "📹 <b>Video Note Converter & MP3 Audio Extractor</b>\n\n"
-        "✨ Ushbu bot orqali siz:\n"
-        "• Oddiy videolarni 1:1 kvadrat <b>Dumaloq video (Video Note)</b> formatiga o'tkazishingiz;\n"
-        "• Videolardan yuqori sifatli <b>MP3 audio</b>ni ajratib olishingiz mumkin.\n\n"
+        "• Oddiy videolarni 1:1 kvadrat <b>Dumaloq video (Video Note)</b> formatiga o'tkazadi.\n"
+        "• Videolardan yuqori sifatli <b>MP3 audio</b>ni ajratib beradi.\n\n"
         "🚀 Botni ishga tushirish uchun <b>Start</b> tugmasini bosing!"
     )
     short_desc = "📹 Dumaloq video (Video Note) va MP3 Audio yaratuvchi bot."
@@ -322,7 +320,7 @@ async def set_bot_description(bot_obj: Bot):
     try:
         await bot_obj.set_my_description(description=description_text)
         await bot_obj.set_my_short_description(short_description=short_desc)
-        logger.info("Bot 'What can this bot do?' tavsifi muvaffaqiyatli o'rnatildi.")
+        logger.info("Bot tavsifi muvaffaqiyatli o'rnatildi.")
     except Exception as e:
         logger.warning(f"Bot tavsifini o'rnatishda xatolik: {e}")
 
@@ -346,9 +344,14 @@ async def start_health_server():
 
 
 async def convert_to_video_note(input_path: str, output_path: str) -> None:
-    """FFmpeg yordamida videoni 1:1 kvadrat dumaloq videoga o'tkazish"""
+    """
+    SUPER TEZKOR (ULTRA FAST) FFmpeg konvertatsiyasi:
+    - 512x512 yengil o'lcham
+    - preset ultrafast + zerolatency
+    - minimal tayyorlash vaqti (< 1 soniya)
+    """
     ffmpeg_bin = get_ffmpeg_cmd()
-    vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=640:640"
+    vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=512:512"
 
     cmd = [
         ffmpeg_bin, "-y",
@@ -356,16 +359,18 @@ async def convert_to_video_note(input_path: str, output_path: str) -> None:
         "-t", "60",
         "-vf", vf_filter,
         "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "23",
+        "-preset", "ultrafast",
+        "-tune", "zerolatency",
+        "-crf", "26",
         "-pix_fmt", "yuv420p",
         "-c:a", "aac",
-        "-b:a", "128k",
+        "-b:a", "96k",
+        "-threads", "4",
         "-movflags", "+faststart",
         output_path
     ]
 
-    logger.info(f"FFmpeg dumaloq video konvertatsiyasi: {input_path} -> {output_path}")
+    logger.info(f"Ultra-fast FFmpeg dumaloq video konvertatsiyasi: {input_path} -> {output_path}")
 
     process = await asyncio.create_subprocess_exec(
         *cmd,
@@ -383,7 +388,7 @@ async def convert_to_video_note(input_path: str, output_path: str) -> None:
 
 
 async def extract_audio(input_path: str, output_path: str) -> None:
-    """FFmpeg yordamida videodan MP3 audio ajratib olish"""
+    """SUPER TEZKOR (ULTRA FAST) MP3 audio ajratib olish"""
     ffmpeg_bin = get_ffmpeg_cmd()
 
     cmd = [
@@ -391,7 +396,8 @@ async def extract_audio(input_path: str, output_path: str) -> None:
         "-i", input_path,
         "-vn",
         "-c:a", "libmp3lame",
-        "-q:a", "2",
+        "-b:a", "128k",
+        "-threads", "4",
         output_path
     ]
 
@@ -657,7 +663,7 @@ async def process_video_action(callback: CallbackQuery):
         await bot.download_file(file_info.file_path, destination=input_path)
 
         if action == "note":
-            # Dumaloq videoga keltirish
+            # Super tezkor dumaloq videoga keltirish
             await convert_to_video_note(input_path, output_note_path)
             video_note_file = FSInputFile(output_note_path)
 
@@ -677,7 +683,7 @@ async def process_video_action(callback: CallbackQuery):
             )
 
         elif action == "audio":
-            # Audioni ajratib olish
+            # Super tezkor audioni ajratib olish
             await extract_audio(input_path, output_audio_path)
             audio_file = FSInputFile(output_audio_path, filename=f"audio_{user.first_name}.mp3")
 
@@ -736,7 +742,7 @@ async def main():
             await bot.send_message(
                 ADMIN_ID,
                 "🚀 <b>Bot muvaffaqiyatli ishga tushdi va xizmatingizda!</b>\n"
-                "'What can this bot do?' tavsifi avtomatik o'rnatildi.",
+                "Super-tezkor ultrafast FFmpeg va toza Bot Tavsifi faollashtirildi.",
                 reply_markup=get_main_reply_keyboard("uz"),
                 parse_mode="HTML"
             )
