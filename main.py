@@ -20,9 +20,8 @@ from aiogram.types import (
     FSInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    KeyboardButton,
     Message,
-    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
 )
 
 # Logging sozlamalari
@@ -66,7 +65,7 @@ TEXTS = {
         "start": (
             "👋 <b>Xush kelibsiz, {name}!</b>\n\n"
             "Videolaringizni <b>Dumaloq video (Video Note)</b> qilish hamda <b>MP3 audio</b>sini ajratib olishda yordam beraman.\n\n"
-            "📹 <i>Videongizni yuboring!</i>"
+            "📹 <i>Kerakli videongizni yuboring!</i>"
         ),
         "help": (
             "ℹ️ <b>YORDAM VA YO'RIQNOMA</b>\n\n"
@@ -75,7 +74,7 @@ TEXTS = {
             "3️⃣ <b>Tilni o'zgartirish:</b> /lang\n"
             "4️⃣ <b>Admin:</b> /admin"
         ),
-        "lang_choose": "🌐 <b>Muloqot tilini tanlang:</b>",
+        "lang_choose": "🌐 <b>Muloqot tilini tanlang / Choose Language:</b>",
         "lang_set": "✅ Muloqot tili <b>O'zbekcha</b>ga o'zgartirildi!",
         "video_received": (
             "📹 <b>Videongiz qabul qilindi.</b>\n"
@@ -116,7 +115,7 @@ TEXTS = {
             "3️⃣ <b>Смена языка:</b> /lang\n"
             "4️⃣ <b>Администратор:</b> /admin"
         ),
-        "lang_choose": "🌐 <b>Выберите язык общения:</b>",
+        "lang_choose": "🌐 <b>Выберите язык общения / Choose Language:</b>",
         "lang_set": "✅ Язык успешно изменен на <b>Русский</b>!",
         "video_received": (
             "📹 <b>Видео получено.</b>\n"
@@ -189,41 +188,21 @@ TEXTS = {
 
 
 def get_start_inline_keyboard(bot_username: str, lang: str = "uz") -> InlineKeyboardMarkup:
-    """Start xabari ostida ko'rinuvchi 'Guruhga qo'shish ⤴️' inline tugmasi"""
-    btn_text = TEXTS.get(lang, TEXTS["uz"])["btn_add_group"]
-    url = f"https://t.me/{bot_username}?startgroup=true" if bot_username else "https://t.me/"
+    """/start xabarida til tanlash (bayroqlar bilan) hamda Guruhga qo'shish inline tugmalari"""
+    btn_group = TEXTS.get(lang, TEXTS["uz"])["btn_add_group"]
+    group_url = f"https://t.me/{bot_username}?startgroup=true" if bot_username else "https://t.me/"
+
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=btn_text, url=url)]
+            [
+                InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data="setlang:uz"),
+                InlineKeyboardButton(text="🇷🇺 Русский", callback_data="setlang:ru"),
+                InlineKeyboardButton(text="🇬🇧 English", callback_data="setlang:en"),
+            ],
+            [
+                InlineKeyboardButton(text=btn_group, url=group_url)
+            ]
         ]
-    )
-
-
-def get_main_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
-    """Xabar yozish joyida (emoji tugmasi yonida) doimiy ko'rinib turuvchi asosiy menyu tugmalari"""
-    if lang == "ru":
-        btn_start = "🚀 Старт"
-        btn_help = "ℹ️ Помощь"
-        btn_lang = "🌐 Выбрать язык"
-        btn_admin = "👑 Админ"
-    elif lang == "en":
-        btn_start = "🚀 Start"
-        btn_help = "ℹ️ Help"
-        btn_lang = "🌐 Change Language"
-        btn_admin = "👑 Admin"
-    else:
-        btn_start = "🚀 Start"
-        btn_help = "ℹ️ Yordam"
-        btn_lang = "🌐 Tilni tanlash"
-        btn_admin = "👑 Admin"
-
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=btn_start), KeyboardButton(text=btn_help)],
-            [KeyboardButton(text=btn_lang), KeyboardButton(text=btn_admin)]
-        ],
-        resize_keyboard=True,
-        persistent=True
     )
 
 
@@ -333,11 +312,11 @@ def db_get_all_users():
 
 
 async def set_bot_commands(bot_obj: Bot):
-    """Telegram command menyusini (/start, /help, /lang, /admin) sozlash"""
+    """Telegram chap tarafdagi native 'Menu' tugmasi buyruqlarini (/start, /help, /lang, /admin) sozlash"""
     commands = [
         BotCommand(command="start", description="🚀 Botni ishga tushirish"),
         BotCommand(command="help", description="ℹ️ Yordam va yo'riqnoma"),
-        BotCommand(command="lang", description="🌐 Tilni o'zgartirish / Language"),
+        BotCommand(command="lang", description="🌐 Tilni o'zgartirish / Select Language"),
         BotCommand(command="admin", description="👑 Admin bilan bog'lanish / Statistika"),
     ]
     await bot_obj.set_my_commands(commands)
@@ -522,9 +501,9 @@ async def extract_audio(input_path: str, output_path: str) -> None:
     logger.info("Audio muvaffaqiyatli ajratib olindi.")
 
 
-@dp.message(or_f(CommandStart(), F.text.in_({"🚀 Start", "🚀 Старт"})))
+@dp.message(CommandStart())
 async def start_handler(message: Message):
-    """/start va Menyudagi Start tugmasi handler'i"""
+    """/start buyrug'i: O'ng tarafdagi tugmani butunlay olib tashlash hamda 3 ta til va bayroqlarni tavsiya qilish"""
     user = message.from_user
     db_save_user(user.id, user.username, user.full_name)
     lang = db_get_user_lang(user.id)
@@ -537,34 +516,28 @@ async def start_handler(message: Message):
         "• /broadcast &lt;xabar&gt; - barcha foydalanuvchilarga e'lon yuborish"
     ) if is_admin else ""
 
-    text = TEXTS[lang]["start"].format(name=user.first_name) + admin_note
-    
-    # Inline Guruhga qo'shish ⤴️ tugmasi
+    start_text = (
+        f"👋 <b>Xush kelibsiz, {user.first_name}!</b>\n\n"
+        "Videolaringizni <b>Dumaloq video (Video Note)</b> qilish va <b>MP3 audio</b>sini ajratib olishda yordam beraman.\n\n"
+        "🌐 <b>Iltimos, muloqot tilini tanlang / Choose language:</b>" + admin_note
+    )
+
     inline_kb = get_start_inline_keyboard(BOT_USERNAME, lang)
-    
-    # Agar shaxsiy chat bo'lsa reply keyboard bilan, guruh bo'lsa faqat inline keyboard bilan
+
+    # ReplyKeyboardRemove() orqali o'ng tarafdagi tugmani butunlay tozalaymiz
+    await message.answer(
+        start_text,
+        reply_markup=inline_kb,
+        parse_mode="HTML"
+    )
     if message.chat.type == ChatType.PRIVATE:
-        await message.answer(
-            text,
-            reply_markup=get_main_reply_keyboard(lang),
-            parse_mode="HTML"
-        )
-        await message.answer(
-            "👇 <b>Botni guruhlarga qo'shish uchun pastdagi tugmani bosing:</b>",
-            reply_markup=inline_kb,
-            parse_mode="HTML"
-        )
-    else:
-        await message.answer(
-            text,
-            reply_markup=inline_kb,
-            parse_mode="HTML"
-        )
+        # Eski o'ng tarafdagi tugmani olib tashlash
+        await message.answer("👇 Kerakli tilni tanlang:", reply_markup=ReplyKeyboardRemove())
 
 
-@dp.message(or_f(Command("help"), F.text.in_({"ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help"})))
+@dp.message(Command("help"))
 async def help_handler(message: Message):
-    """/help va Menyudagi Yordam tugmasi handler'i"""
+    """/help buyrug'i handler'i"""
     user = message.from_user
     db_save_user(user.id, user.username, user.full_name)
     lang = db_get_user_lang(user.id)
@@ -572,27 +545,18 @@ async def help_handler(message: Message):
     text = TEXTS[lang]["help"]
     await message.answer(
         text,
-        reply_markup=get_main_reply_keyboard(lang) if message.chat.type == ChatType.PRIVATE else None,
         parse_mode="HTML"
     )
 
 
-@dp.message(or_f(Command("lang"), F.text.in_({"🌐 Tilni tanlash", "🌐 Выбрать язык", "🌐 Change Language", "🌐 Язык", "🌐 Language"})))
+@dp.message(Command("lang"))
 async def lang_handler(message: Message):
-    """/lang va Menyudagi Tilni tanlash tugmasi handler'i"""
+    """/lang buyrug'i handler'i"""
     user = message.from_user
     db_save_user(user.id, user.username, user.full_name)
     lang = db_get_user_lang(user.id)
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data="setlang:uz"),
-                InlineKeyboardButton(text="🇷🇺 Русский", callback_data="setlang:ru"),
-                InlineKeyboardButton(text="🇬🇧 English", callback_data="setlang:en"),
-            ]
-        ]
-    )
+    keyboard = get_start_inline_keyboard(BOT_USERNAME, lang)
 
     await message.answer(
         TEXTS[lang]["lang_choose"],
@@ -603,22 +567,21 @@ async def lang_handler(message: Message):
 
 @dp.callback_query(F.data.startswith("setlang:"))
 async def set_language_callback(callback: CallbackQuery):
-    """Til o'zgarganda ishlaydigan callback handler"""
+    """Til tugmalari (bayroqlar bilan) bosilganda ishlaydigan handler"""
     await callback.answer()
     new_lang = callback.data.split(":")[1]
     if new_lang in TEXTS:
         db_set_user_lang(callback.from_user.id, new_lang)
-        await callback.message.edit_text(TEXTS[new_lang]["lang_set"], parse_mode="HTML")
-        await callback.message.answer(
-            TEXTS[new_lang]["start"].format(name=callback.from_user.first_name),
-            reply_markup=get_main_reply_keyboard(new_lang) if callback.message.chat.type == ChatType.PRIVATE else None,
-            parse_mode="HTML"
+        confirm_text = (
+            f"{TEXTS[new_lang]['lang_set']}\n\n"
+            f"{TEXTS[new_lang]['start'].format(name=callback.from_user.first_name)}"
         )
+        await callback.message.edit_text(confirm_text, parse_mode="HTML")
 
 
-@dp.message(or_f(Command("admin", "stats"), F.text.in_({"👑 Admin", "👑 Админ"})))
+@dp.message(Command("admin", "stats"))
 async def admin_handler(message: Message):
-    """/admin va Menyudagi Admin tugmasi handler'i"""
+    """/admin buyrug'i handler'i"""
     user = message.from_user
     db_save_user(user.id, user.username, user.full_name)
     lang = db_get_user_lang(user.id)
@@ -718,8 +681,7 @@ async def video_handler(message: Message):
             await message.reply(
                 "😊 <b>Hurmatli foydalanuvchi!</b>\n"
                 "Iltimos, menga faqat video formatidagi fayl yoki oddiy video yuboring.",
-                parse_mode="HTML",
-                reply_markup=get_main_reply_keyboard(lang)
+                parse_mode="HTML"
             )
         return
 
@@ -863,7 +825,7 @@ async def main():
     BOT_USERNAME = bot_info.username
     logger.info(f"Bot muvaffaqiyatli aniqlandi: @{BOT_USERNAME}")
 
-    # Bot buyruqlar menyusini va 'What can this bot do?' tavsifini o'rnatish
+    # Bot buyruqlar menyusini (chap tarafdagi Menu) va 'What can this bot do?' tavsifini o'rnatish
     await set_bot_commands(bot)
     await set_bot_description(bot)
 
@@ -876,8 +838,7 @@ async def main():
             await bot.send_message(
                 ADMIN_ID,
                 "🚀 <b>Bot muvaffaqiyatli ishga tushdi va xizmatingizda!</b>\n"
-                "Guruhga qo'shish (Add to Group) inline tugmasi faollashtirildi.",
-                reply_markup=get_main_reply_keyboard("uz"),
+                "O'ng tarafdagi tugma tozalandi, faqat chap Menu buyruqlari hamda /start da 3 ta bayroqli til tanlash faollashdi.",
                 parse_mode="HTML"
             )
             logger.info(f"Admin ID {ADMIN_ID} ga ishga tushganlik haqida bildirishnoma yuborildi.")
