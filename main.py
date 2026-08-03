@@ -89,7 +89,6 @@ TEXTS = {
         ),
         "done_note": "✅ Dumaloq videongiz tayyor, <b>{name}</b>!",
         "done_note_split": "✅ Videongiz 1 minutdan uzun bo'lgani uchun 2 qismga bo'lib dumaloq video shaklida yuborildi, <b>{name}</b>!",
-        "done_audio": "🎵 Video audiosi (MP3) tayyor, <b>{name}</b>!",
         "err_msg": "❌ Videoni qayta ishlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
         "admin_info": (
             "👑 <b>BOT ADMINISTRATORI VA DASTURCHISI</b>\n\n"
@@ -130,7 +129,6 @@ TEXTS = {
         ),
         "done_note": "✅ Ваше круглое видео готово, <b>{name}</b>!",
         "done_note_split": "✅ Так как видео длиннее 1 минуты, оно отправлено 2 частями в виде круглых видео, <b>{name}</b>!",
-        "done_audio": "🎵 MP3 аудио из видео готово, <b>{name}</b>!",
         "err_msg": "❌ Ошибка при обработке видео. Попробуйте еще раз.",
         "admin_info": (
             "👑 <b>АДМИНИСТРАТОР И РАЗРАБОТЧИК БОТА</b>\n\n"
@@ -171,7 +169,6 @@ TEXTS = {
         ),
         "done_note": "✅ Your round video is ready, <b>{name}</b>!",
         "done_note_split": "✅ Since your video was longer than 1 minute, it was sent in 2 parts as round video notes, <b>{name}</b>!",
-        "done_audio": "🎵 Video audio (MP3) is ready, <b>{name}</b>!",
         "err_msg": "❌ Error processing video. Please try again.",
         "admin_info": (
             "👑 <b>BOT ADMINISTRATOR & DEVELOPER</b>\n\n"
@@ -778,7 +775,7 @@ async def process_video_action(callback: CallbackQuery):
             )
 
         elif action == "audio":
-            # Audioni ajratib olish
+            # Audioni ajratib olish (Foydalanuvchi so'raganidek audio tagiga hechnarsa yozilmaydi)
             generated_temp_files.append(output_audio_path)
             await extract_audio(input_path, output_audio_path)
             audio_file = FSInputFile(output_audio_path, filename=f"audio_{user.first_name}.mp3")
@@ -786,9 +783,7 @@ async def process_video_action(callback: CallbackQuery):
             await bot.send_audio(
                 chat_id=callback.message.chat.id,
                 audio=audio_file,
-                caption=TEXTS[lang]["done_audio"].format(name=user.first_name),
-                reply_to_message_id=target_msg.message_id,
-                parse_mode="HTML"
+                reply_to_message_id=target_msg.message_id
             )
             db_increment_stats(user.id, action_type="audio")
             await callback.message.delete()
@@ -838,7 +833,7 @@ async def main():
             await bot.send_message(
                 ADMIN_ID,
                 "🚀 <b>Bot muvaffaqiyatli ishga tushdi va xizmatingizda!</b>\n"
-                "1 minutdan oshgan videolarni 2 qismga bo'lish va yuklash ogohlantirishi faollashtirildi.",
+                "Audio yuborishda caption (izoh) olib tashlandi.",
                 reply_markup=get_main_reply_keyboard("uz"),
                 parse_mode="HTML"
             )
