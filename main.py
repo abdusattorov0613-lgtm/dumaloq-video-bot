@@ -21,7 +21,6 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
-    ReplyKeyboardRemove,
 )
 
 # Logging sozlamalari
@@ -188,7 +187,7 @@ TEXTS = {
 
 
 def get_start_inline_keyboard(bot_username: str, lang: str = "uz") -> InlineKeyboardMarkup:
-    """/start xabarida til tanlash (bayroqlar bilan) hamda Guruhga qo'shish inline tugmalari"""
+    """/start xabarida 4 ta inline tugma (3 ta til bayroq bilan + Guruhga qo'shish)"""
     btn_group = TEXTS.get(lang, TEXTS["uz"])["btn_add_group"]
     group_url = f"https://t.me/{bot_username}?startgroup=true" if bot_username else "https://t.me/"
 
@@ -503,7 +502,7 @@ async def extract_audio(input_path: str, output_path: str) -> None:
 
 @dp.message(CommandStart())
 async def start_handler(message: Message):
-    """/start buyrug'i: O'ng tarafdagi tugmani butunlay olib tashlash hamda 3 ta til va bayroqlarni tavsiya qilish"""
+    """Faqat 1 ta xabar yuboriladi: Choose Language matni va 4 ta inline tugma (3 ta til + Guruhga qo'shish)."""
     user = message.from_user
     db_save_user(user.id, user.username, user.full_name)
     lang = db_get_user_lang(user.id)
@@ -517,22 +516,18 @@ async def start_handler(message: Message):
     ) if is_admin else ""
 
     start_text = (
-        f"👋 <b>Xush kelibsiz, {user.first_name}!</b>\n\n"
-        "Videolaringizni <b>Dumaloq video (Video Note)</b> qilish va <b>MP3 audio</b>sini ajratib olishda yordam beraman.\n\n"
-        "🌐 <b>Iltimos, muloqot tilini tanlang / Choose language:</b>" + admin_note
+        f"👋 <b>Xush kelibsiz / Добро пожаловать / Welcome, {user.first_name}!</b>\n\n"
+        "📹 <b>Video Note Converter & MP3 Audio Extractor</b>\n\n"
+        "🌐 <b>Iltimos, muloqot tilini tanlang / Choose your language:</b>" + admin_note
     )
 
     inline_kb = get_start_inline_keyboard(BOT_USERNAME, lang)
 
-    # ReplyKeyboardRemove() orqali o'ng tarafdagi tugmani butunlay tozalaymiz
     await message.answer(
         start_text,
         reply_markup=inline_kb,
         parse_mode="HTML"
     )
-    if message.chat.type == ChatType.PRIVATE:
-        # Eski o'ng tarafdagi tugmani olib tashlash
-        await message.answer("👇 Kerakli tilni tanlang:", reply_markup=ReplyKeyboardRemove())
 
 
 @dp.message(Command("help"))
@@ -838,7 +833,7 @@ async def main():
             await bot.send_message(
                 ADMIN_ID,
                 "🚀 <b>Bot muvaffaqiyatli ishga tushdi va xizmatingizda!</b>\n"
-                "O'ng tarafdagi tugma tozalandi, faqat chap Menu buyruqlari hamda /start da 3 ta bayroqli til tanlash faollashdi.",
+                "Faqat 1 ta xabar va ostida 4 ta inline bo'lim (3 ta til bayroqlari + Guruhga qo'shish) sozlandi.",
                 parse_mode="HTML"
             )
             logger.info(f"Admin ID {ADMIN_ID} ga ishga tushganlik haqida bildirishnoma yuborildi.")
