@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from aiohttp import web
 
 from aiogram import Bot, Dispatcher, F, types
+from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandStart, or_f
 from aiogram.types import (
     BotCommand,
@@ -50,6 +51,9 @@ if not BOT_TOKEN or BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN_HERE":
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# Bot username saqlash uchun
+BOT_USERNAME = ""
+
 # Bot ishga tushgan vaqt
 START_TIME = datetime.datetime.now()
 
@@ -79,6 +83,7 @@ TEXTS = {
         ),
         "btn_note": "🔵 Dumaloq video qilish (Video Note)",
         "btn_audio": "🎵 Ovozini ajratib olish (MP3)",
+        "btn_add_group": "➕ Guruhga qo'shish ⤴️",
         "note_processing": (
             "⚡ <b>Videongiz dumaloq formatga o'tkazilmoqda...</b>\n"
             "<i>Eslatma: Video hajmi va davomiyligi katta bo'lsa, qayta ishlash bir oz ko'proq vaqt olishi mumkin.</i>"
@@ -119,6 +124,7 @@ TEXTS = {
         ),
         "btn_note": "🔵 Сделать круглое видео (Video Note)",
         "btn_audio": "🎵 Извлечь звук (MP3)",
+        "btn_add_group": "➕ Добавить в группу ⤴️",
         "note_processing": (
             "⚡ <b>Видео преобразуется в круглое...</b>\n"
             "<i>Примечание: Если видео большого объема или длительности, это может занять немного больше времени.</i>"
@@ -159,6 +165,7 @@ TEXTS = {
         ),
         "btn_note": "🔵 Make Round Video (Video Note)",
         "btn_audio": "🎵 Extract Audio (MP3)",
+        "btn_add_group": "➕ Add to Group ⤴️",
         "note_processing": (
             "⚡ <b>Converting to round video...</b>\n"
             "<i>Note: If the video size or duration is large, processing may take a little extra time.</i>"
@@ -179,6 +186,17 @@ TEXTS = {
         "btn_admin_contact": "💬 Contact Admin (@ilkhomjon_abdusattorov)"
     }
 }
+
+
+def get_start_inline_keyboard(bot_username: str, lang: str = "uz") -> InlineKeyboardMarkup:
+    """Start xabari ostida ko'rinuvchi 'Guruhga qo'shish ⤴️' inline tugmasi"""
+    btn_text = TEXTS.get(lang, TEXTS["uz"])["btn_add_group"]
+    url = f"https://t.me/{bot_username}?startgroup=true" if bot_username else "https://t.me/"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=btn_text, url=url)]
+        ]
+    )
 
 
 def get_main_reply_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
@@ -520,11 +538,28 @@ async def start_handler(message: Message):
     ) if is_admin else ""
 
     text = TEXTS[lang]["start"].format(name=user.first_name) + admin_note
-    await message.answer(
-        text,
-        reply_markup=get_main_reply_keyboard(lang),
-        parse_mode="HTML"
-    )
+    
+    # Inline Guruhga qo'shish ⤴️ tugmasi
+    inline_kb = get_start_inline_keyboard(BOT_USERNAME, lang)
+    
+    # Agar shaxsiy chat bo'lsa reply keyboard bilan, guruh bo'lsa faqat inline keyboard bilan
+    if message.chat.type == ChatType.PRIVATE:
+        await message.answer(
+            text,
+            reply_markup=get_main_reply_keyboard(lang),
+            parse_mode="HTML"
+        )
+        await message.answer(
+            "👇 <b>Botni guruhlarga qo'shish uchun pastdagi tugmani bosing:</b>",
+            reply_markup=inline_kb,
+            parse_mode="HTML"
+        )
+    else:
+        await message.answer(
+            text,
+            reply_markup=inline_kb,
+            parse_mode="HTML"
+        )
 
 
 @dp.message(or_f(Command("help"), F.text.in_({"ℹ️ Yordam", "ℹ️ Помощь", "ℹ️ Help"})))
@@ -537,7 +572,7 @@ async def help_handler(message: Message):
     text = TEXTS[lang]["help"]
     await message.answer(
         text,
-        reply_markup=get_main_reply_keyboard(lang),
+        reply_markup=get_main_reply_keyboard(lang) if message.chat.type == ChatType.PRIVATE else None,
         parse_mode="HTML"
     )
 
@@ -576,7 +611,7 @@ async def set_language_callback(callback: CallbackQuery):
         await callback.message.edit_text(TEXTS[new_lang]["lang_set"], parse_mode="HTML")
         await callback.message.answer(
             TEXTS[new_lang]["start"].format(name=callback.from_user.first_name),
-            reply_markup=get_main_reply_keyboard(new_lang),
+            reply_markup=get_main_reply_keyboard(new_lang) if callback.message.chat.type == ChatType.PRIVATE else None,
             parse_mode="HTML"
         )
 
@@ -663,7 +698,7 @@ async def broadcast_handler(message: Message):
 
 @dp.message(F.video | F.document)
 async def video_handler(message: Message):
-    """Foydalanuvchi video yuborganda ishlaydigan handler"""
+    """Foydalanuvchi video yuborganda ishlaydigan handler (Shaxsiy chatda va Guruhlarda)"""
     user = message.from_user
     db_save_user(user.id, user.username, user.full_name)
     lang = db_get_user_lang(user.id)
@@ -679,12 +714,13 @@ async def video_handler(message: Message):
             is_video = True
 
     if not is_video:
-        await message.reply(
-            "😊 <b>Hurmatli foydalanuvchi!</b>\n"
-            "Iltimos, menga faqat video formatidagi fayl yoki oddiy video yuboring.",
-            parse_mode="HTML",
-            reply_markup=get_main_reply_keyboard(lang)
-        )
+        if message.chat.type == ChatType.PRIVATE:
+            await message.reply(
+                "😊 <b>Hurmatli foydalanuvchi!</b>\n"
+                "Iltimos, menga faqat video formatidagi fayl yoki oddiy video yuboring.",
+                parse_mode="HTML",
+                reply_markup=get_main_reply_keyboard(lang)
+            )
         return
 
     # Inline menyu tugmalari
@@ -813,12 +849,19 @@ async def process_video_action(callback: CallbackQuery):
 
 
 async def main():
+    global BOT_USERNAME
+
     # DB ni ishga tushirish
     init_db()
     logger.info("Database muvaffaqiyatli yaratildi/ulandi.")
 
     # Render uchun HTTP health serverni ishga tushirish
     await start_health_server()
+
+    # Bot ma'lumotlarini olish
+    bot_info = await bot.get_me()
+    BOT_USERNAME = bot_info.username
+    logger.info(f"Bot muvaffaqiyatli aniqlandi: @{BOT_USERNAME}")
 
     # Bot buyruqlar menyusini va 'What can this bot do?' tavsifini o'rnatish
     await set_bot_commands(bot)
@@ -833,7 +876,7 @@ async def main():
             await bot.send_message(
                 ADMIN_ID,
                 "🚀 <b>Bot muvaffaqiyatli ishga tushdi va xizmatingizda!</b>\n"
-                "Audio yuborishda caption (izoh) olib tashlandi.",
+                "Guruhga qo'shish (Add to Group) inline tugmasi faollashtirildi.",
                 reply_markup=get_main_reply_keyboard("uz"),
                 parse_mode="HTML"
             )
