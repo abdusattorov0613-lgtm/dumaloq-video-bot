@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import logging
 import os
+import re
 import shutil
 import sqlite3
 import sys
@@ -65,7 +66,7 @@ TEXTS = {
         ),
         "help": (
             "ℹ️ <b>YORDAM VA YO'RIQNOMA</b>\n\n"
-            "1️⃣ <b>Dumaloq video:</b> Videoni yuboring va 🔵 <i>Dumaloq video qilish</i> tugmasini bosing (max 60s, 1:1 format).\n"
+            "1️⃣ <b>Dumaloq video:</b> Videoni yuboring va 🔵 <i>Dumaloq video qilish</i> tugmasini bosing (1 minutdan oshsa 2 qismga bo'lib beriladi).\n"
             "2️⃣ <b>MP3 Audio:</b> Videoni yuboring va 🎵 <i>Ovozini ajratib olish</i> tugmasini bosing.\n"
             "3️⃣ <b>Tilni o'zgartirish:</b> /lang\n"
             "4️⃣ <b>Admin:</b> /admin"
@@ -78,9 +79,16 @@ TEXTS = {
         ),
         "btn_note": "🔵 Dumaloq video qilish (Video Note)",
         "btn_audio": "🎵 Ovozini ajratib olish (MP3)",
-        "note_processing": "⚡ <b>Dumaloq video tezkor tayyorlanmoqda...</b>",
-        "audio_processing": "⚡ <b>MP3 audio tezkor ajratib olinmoqda...</b>",
+        "note_processing": (
+            "⚡ <b>Videongiz dumaloq formatga o'tkazilmoqda...</b>\n"
+            "<i>Eslatma: Video hajmi va davomiyligi katta bo'lsa, qayta ishlash bir oz ko'proq vaqt olishi mumkin.</i>"
+        ),
+        "audio_processing": (
+            "⚡ <b>MP3 audio ajratib olinmoqda...</b>\n"
+            "<i>Eslatma: Video hajmi katta bo'lsa, qayta ishlash bir oz ko'proq vaqt olishi mumkin.</i>"
+        ),
         "done_note": "✅ Dumaloq videongiz tayyor, <b>{name}</b>!",
+        "done_note_split": "✅ Videongiz 1 minutdan uzun bo'lgani uchun 2 qismga bo'lib dumaloq video shaklida yuborildi, <b>{name}</b>!",
         "done_audio": "🎵 Video audiosi (MP3) tayyor, <b>{name}</b>!",
         "err_msg": "❌ Videoni qayta ishlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
         "admin_info": (
@@ -99,7 +107,7 @@ TEXTS = {
         ),
         "help": (
             "ℹ️ <b>ПОМОЩЬ И ИНСТРУКЦИЯ</b>\n\n"
-            "1️⃣ <b>Круглое видео:</b> Отправьте видео и нажмите 🔵 <i>Сделать круглое видео</i> (до 60 сек, 1:1).\n"
+            "1️⃣ <b>Круглое видео:</b> Отправьте видео и нажмите 🔵 <i>Сделать круглое видео</i> (если более 1 мин, будет 2 части).\n"
             "2️⃣ <b>MP3 Аудио:</b> Отправьте видео и нажмите 🎵 <i>Извлечь звук</i>.\n"
             "3️⃣ <b>Смена языка:</b> /lang\n"
             "4️⃣ <b>Администратор:</b> /admin"
@@ -112,9 +120,16 @@ TEXTS = {
         ),
         "btn_note": "🔵 Сделать круглое видео (Video Note)",
         "btn_audio": "🎵 Извлечь звук (MP3)",
-        "note_processing": "⚡ <b>Быстрое создание круглого видео...</b>",
-        "audio_processing": "⚡ <b>Быстрое извлечение MP3...</b>",
+        "note_processing": (
+            "⚡ <b>Видео преобразуется в круглое...</b>\n"
+            "<i>Примечание: Если видео большого объема или длительности, это может занять немного больше времени.</i>"
+        ),
+        "audio_processing": (
+            "⚡ <b>Извлечение MP3...</b>\n"
+            "<i>Примечание: Если видео большого объема, это может занять немного больше времени.</i>"
+        ),
         "done_note": "✅ Ваше круглое видео готово, <b>{name}</b>!",
+        "done_note_split": "✅ Так как видео длиннее 1 минуты, оно отправлено 2 частями в виде круглых видео, <b>{name}</b>!",
         "done_audio": "🎵 MP3 аудио из видео готово, <b>{name}</b>!",
         "err_msg": "❌ Ошибка при обработке видео. Попробуйте еще раз.",
         "admin_info": (
@@ -133,7 +148,7 @@ TEXTS = {
         ),
         "help": (
             "ℹ️ <b>HELP & INSTRUCTIONS</b>\n\n"
-            "1️⃣ <b>Round Video:</b> Send video and click 🔵 <i>Make Round Video</i> (max 60s, 1:1).\n"
+            "1️⃣ <b>Round Video:</b> Send video and click 🔵 <i>Make Round Video</i> (if > 1 min, split into 2 parts).\n"
             "2️⃣ <b>MP3 Audio:</b> Send video and click 🎵 <i>Extract Audio</i>.\n"
             "3️⃣ <b>Change Language:</b> /lang\n"
             "4️⃣ <b>Admin:</b> /admin"
@@ -146,9 +161,16 @@ TEXTS = {
         ),
         "btn_note": "🔵 Make Round Video (Video Note)",
         "btn_audio": "🎵 Extract Audio (MP3)",
-        "note_processing": "⚡ <b>Fast converting to round video...</b>",
-        "audio_processing": "⚡ <b>Fast extracting MP3 audio...</b>",
+        "note_processing": (
+            "⚡ <b>Converting to round video...</b>\n"
+            "<i>Note: If the video size or duration is large, processing may take a little extra time.</i>"
+        ),
+        "audio_processing": (
+            "⚡ <b>Extracting MP3 audio...</b>\n"
+            "<i>Note: If the video size is large, processing may take a little extra time.</i>"
+        ),
         "done_note": "✅ Your round video is ready, <b>{name}</b>!",
+        "done_note_split": "✅ Since your video was longer than 1 minute, it was sent in 2 parts as round video notes, <b>{name}</b>!",
         "done_audio": "🎵 Video audio (MP3) is ready, <b>{name}</b>!",
         "err_msg": "❌ Error processing video. Please try again.",
         "admin_info": (
@@ -311,9 +333,9 @@ async def set_bot_description(bot_obj: Bot):
     """Botga kirganda Start bosishdan oldin ko'rinadigan toza va londa 'What can this bot do?' tavsifini o'rnatish"""
     description_text = (
         "📹 <b>Video Note Converter & MP3 Audio Extractor</b>\n\n"
-        "• Oddiy videolarni 1:1 kvadrat <b>Dumaloq video (Video Note)</b> formatiga o'tkazadi.\n"
-        "• Videolardan yuqori sifatli <b>MP3 audio</b>ni ajratib beradi.\n\n"
-        "🚀 Botni ishga tushirish uchun <b>Start</b> tugmasini bosing!"
+        "• Oddiy videolarni 1:1 kvadrat Dumaloq video (Video Note) formatiga o'tkazadi.\n"
+        "• Videolardan yuqori sifatli MP3 audioni ajratib beradi.\n\n"
+        "🚀 Botni ishga tushirish uchun Start tugmasini bosing!"
     )
     short_desc = "📹 Dumaloq video (Video Note) va MP3 Audio yaratuvchi bot."
 
@@ -343,34 +365,10 @@ async def start_health_server():
     logger.info(f"Render uchun HTTP health server {port}-portda ishga tushdi.")
 
 
-async def convert_to_video_note(input_path: str, output_path: str) -> None:
-    """
-    SUPER TEZKOR (ULTRA FAST) FFmpeg konvertatsiyasi:
-    - 512x512 yengil o'lcham
-    - preset ultrafast + zerolatency
-    - minimal tayyorlash vaqti (< 1 soniya)
-    """
+async def get_video_duration(input_path: str) -> float:
+    """FFmpeg orqali video davomiyligini (soniyalarda) aniqlash"""
     ffmpeg_bin = get_ffmpeg_cmd()
-    vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=512:512"
-
-    cmd = [
-        ffmpeg_bin, "-y",
-        "-i", input_path,
-        "-t", "60",
-        "-vf", vf_filter,
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-tune", "zerolatency",
-        "-crf", "26",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac",
-        "-b:a", "96k",
-        "-threads", "4",
-        "-movflags", "+faststart",
-        output_path
-    ]
-
-    logger.info(f"Ultra-fast FFmpeg dumaloq video konvertatsiyasi: {input_path} -> {output_path}")
+    cmd = [ffmpeg_bin, "-i", input_path]
 
     process = await asyncio.create_subprocess_exec(
         *cmd,
@@ -378,13 +376,104 @@ async def convert_to_video_note(input_path: str, output_path: str) -> None:
         stderr=asyncio.subprocess.PIPE
     )
     stdout, stderr = await process.communicate()
+    output = stderr.decode(errors="replace")
 
-    if process.returncode != 0:
-        error_text = stderr.decode(errors="replace")
-        logger.error(f"FFmpeg xatoligi: {error_text}")
-        raise RuntimeError("FFmpeg orqali videoni qayta ishlashda xatolik yuz berdi.")
+    match = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", output)
+    if match:
+        hours = float(match.group(1))
+        minutes = float(match.group(2))
+        seconds = float(match.group(3))
+        return hours * 3600 + minutes * 60 + seconds
+    return 0.0
 
-    logger.info("FFmpeg dumaloq video muvaffaqiyatli tayyorlandi.")
+
+async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str) -> list[str]:
+    """
+    Videoni dumaloq shaklga keltirish:
+    - Agar video davomiyligi 60s dan kam/teng bo'lsa: 1 ta dumaloq video.
+    - Agar video 60s dan uzun bo'lsa: 2 qismga bo'lib (1-qism: 0-60s, 2-qism: 60s-120s) 2 ta dumaloq video tayyorlanadi.
+    """
+    ffmpeg_bin = get_ffmpeg_cmd()
+    duration = await get_video_duration(input_path)
+    logger.info(f"Video davomiyligi aniqlandi: {duration:.2f} soniya")
+
+    output_files = []
+    vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=512:512"
+
+    if duration > 60.5:
+        # Video 1 minutdan uzun -> 2 qismga bo'lish
+        logger.info("Video 1 minutdan uzun, 2 qismga bo'linmoqda...")
+        
+        # 1-qism (0s - 60s)
+        part1_path = os.path.join(temp_dir, f"out_{unique_id}_part1.mp4")
+        cmd1 = [
+            ffmpeg_bin, "-y",
+            "-ss", "0",
+            "-i", input_path,
+            "-t", "60",
+            "-vf", vf_filter,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-tune", "zerolatency",
+            "-crf", "26",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-b:a", "96k",
+            "-threads", "4",
+            "-movflags", "+faststart",
+            part1_path
+        ]
+        proc1 = await asyncio.create_subprocess_exec(*cmd1, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        await proc1.communicate()
+        output_files.append(part1_path)
+
+        # 2-qism (60s - max 120s)
+        part2_path = os.path.join(temp_dir, f"out_{unique_id}_part2.mp4")
+        cmd2 = [
+            ffmpeg_bin, "-y",
+            "-ss", "60",
+            "-i", input_path,
+            "-t", "60",
+            "-vf", vf_filter,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-tune", "zerolatency",
+            "-crf", "26",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-b:a", "96k",
+            "-threads", "4",
+            "-movflags", "+faststart",
+            part2_path
+        ]
+        proc2 = await asyncio.create_subprocess_exec(*cmd2, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        await proc2.communicate()
+        output_files.append(part2_path)
+
+    else:
+        # Single part (0s - 60s)
+        part1_path = os.path.join(temp_dir, f"out_{unique_id}_part1.mp4")
+        cmd1 = [
+            ffmpeg_bin, "-y",
+            "-i", input_path,
+            "-t", "60",
+            "-vf", vf_filter,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-tune", "zerolatency",
+            "-crf", "26",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-b:a", "96k",
+            "-threads", "4",
+            "-movflags", "+faststart",
+            part1_path
+        ]
+        proc1 = await asyncio.create_subprocess_exec(*cmd1, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        await proc1.communicate()
+        output_files.append(part1_path)
+
+    return output_files
 
 
 async def extract_audio(input_path: str, output_path: str) -> None:
@@ -654,8 +743,9 @@ async def process_video_action(callback: CallbackQuery):
     temp_dir = tempfile.gettempdir()
     unique_id = uuid.uuid4().hex
     input_path = os.path.join(temp_dir, f"input_{unique_id}.mp4")
-    output_note_path = os.path.join(temp_dir, f"output_{unique_id}.mp4")
     output_audio_path = os.path.join(temp_dir, f"output_{unique_id}.mp3")
+
+    generated_temp_files = [input_path]
 
     try:
         # 1. Videoni yuklab olish
@@ -663,27 +753,33 @@ async def process_video_action(callback: CallbackQuery):
         await bot.download_file(file_info.file_path, destination=input_path)
 
         if action == "note":
-            # Super tezkor dumaloq videoga keltirish
-            await convert_to_video_note(input_path, output_note_path)
-            video_note_file = FSInputFile(output_note_path)
+            # Dumaloq videoga keltirish (1 minutdan oshsa 2 qismga bo'ladi)
+            output_files = await convert_to_video_notes(input_path, temp_dir, unique_id)
+            generated_temp_files.extend(output_files)
 
-            await bot.send_video_note(
-                chat_id=callback.message.chat.id,
-                video_note=video_note_file,
-                reply_to_message_id=target_msg.message_id
-            )
-            db_increment_stats(user.id, action_type="note")
+            for part_file in output_files:
+                video_note_file = FSInputFile(part_file)
+                await bot.send_video_note(
+                    chat_id=callback.message.chat.id,
+                    video_note=video_note_file,
+                    reply_to_message_id=target_msg.message_id
+                )
+                db_increment_stats(user.id, action_type="note")
+                await asyncio.sleep(0.4)
 
             await callback.message.delete()
+
+            done_text = TEXTS[lang]["done_note_split"].format(name=user.first_name) if len(output_files) > 1 else TEXTS[lang]["done_note"].format(name=user.first_name)
             await bot.send_message(
                 chat_id=callback.message.chat.id,
-                text=TEXTS[lang]["done_note"].format(name=user.first_name),
+                text=done_text,
                 reply_to_message_id=target_msg.message_id,
                 parse_mode="HTML"
             )
 
         elif action == "audio":
-            # Super tezkor audioni ajratib olish
+            # Audioni ajratib olish
+            generated_temp_files.append(output_audio_path)
             await extract_audio(input_path, output_audio_path)
             audio_file = FSInputFile(output_audio_path, filename=f"audio_{user.first_name}.mp3")
 
@@ -713,7 +809,7 @@ async def process_video_action(callback: CallbackQuery):
             except Exception:
                 pass
     finally:
-        for temp_file in (input_path, output_note_path, output_audio_path):
+        for temp_file in generated_temp_files:
             if os.path.exists(temp_file):
                 try:
                     os.remove(temp_file)
@@ -742,7 +838,7 @@ async def main():
             await bot.send_message(
                 ADMIN_ID,
                 "🚀 <b>Bot muvaffaqiyatli ishga tushdi va xizmatingizda!</b>\n"
-                "Super-tezkor ultrafast FFmpeg va toza Bot Tavsifi faollashtirildi.",
+                "1 minutdan oshgan videolarni 2 qismga bo'lish va yuklash ogohlantirishi faollashtirildi.",
                 reply_markup=get_main_reply_keyboard("uz"),
                 parse_mode="HTML"
             )
