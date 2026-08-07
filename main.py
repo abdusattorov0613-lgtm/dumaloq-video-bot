@@ -91,14 +91,8 @@ TEXTS = {
         "btn_note": "🔵 Dumaloq video qilish (Video Note)",
         "btn_audio": "🎵 Ovozini ajratib olish (MP3)",
         "btn_add_group": "➕ Guruhga qo'shish ⤴️",
-        "note_processing": (
-            "⚡ <b>Videongiz yuqori sifatda ultra-tezkor tayyorlanmoqda...</b>\n"
-            "<i>Eslatma: Video hajmi katta bo'lsa, bir oz ko'proq vaqt talab qilishi mumkin.</i>"
-        ),
-        "audio_processing": (
-            "⚡ <b>MP3 audio ultra-tezkor ajratib olinmoqda...</b>\n"
-            "<i>Eslatma: Video hajmi katta bo'lsa, bir oz ko'proq vaqt talab qilishi mumkin.</i>"
-        ),
+        "note_processing": "⚡ <b>Videongiz tayyorlanmoqda...</b>",
+        "audio_processing": "⚡ <b>MP3 audio tayyorlanmoqda...</b>",
         "err_msg": (
             "⚠️ <b>Videoni hajmini pastroq qilib tashlang!</b>\n\n"
             "Videoning hajmi juda kattaligi yoki uni qayta ishlash imkoni bo'lmagani sababli bajarilmadi.\n"
@@ -134,14 +128,8 @@ TEXTS = {
         "btn_note": "🔵 Сделать круглое видео (Video Note)",
         "btn_audio": "🎵 Извлечь звук (MP3)",
         "btn_add_group": "➕ Добавить в группу ⤴️",
-        "note_processing": (
-            "⚡ <b>Ультра-быстрое создание круглого видео в высоком качестве...</b>\n"
-            "<i>Примечание: Если видео большого объема, это может занять немного больше времени.</i>"
-        ),
-        "audio_processing": (
-            "⚡ <b>Ультра-быстрое извлечение MP3...</b>\n"
-            "<i>Примечание: Если видео большого объема, это может занять немного больше времени.</i>"
-        ),
+        "note_processing": "⚡ <b>Ваше видео готовится...</b>",
+        "audio_processing": "⚡ <b>MP3 аудио готовится...</b>",
         "err_msg": (
             "⚠️ <b>Пожалуйста, уменьшите размер видео!</b>\n\n"
             "Размер видео слишком большой или его не удалось обработать.\n"
@@ -177,14 +165,8 @@ TEXTS = {
         "btn_note": "🔵 Make Round Video (Video Note)",
         "btn_audio": "🎵 Extract Audio (MP3)",
         "btn_add_group": "➕ Add to Group ⤴️",
-        "note_processing": (
-            "⚡ <b>Ultra-fast high quality converting...</b>\n"
-            "<i>Note: If the video size is large, processing may take a little extra time.</i>"
-        ),
-        "audio_processing": (
-            "⚡ <b>Ultra-fast extracting MP3 audio...</b>\n"
-            "<i>Note: If the video size is large, processing may take a little extra time.</i>"
-        ),
+        "note_processing": "⚡ <b>Your video is being prepared...</b>",
+        "audio_processing": "⚡ <b>Extracting MP3 audio...</b>",
         "err_msg": (
             "⚠️ <b>Please send a video with a smaller file size!</b>\n\n"
             "The video file is too large or could not be processed.\n"
@@ -397,15 +379,15 @@ async def get_video_duration(input_path: str) -> float:
 
 async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str) -> list[str]:
     """
-    TINIQ SHINAKAR DARAJADAGI YUQORI SIFAT (640x640, CRF=22, maxrate=2M, ultrafast, zerolatency, threads=0):
-    - Katta va yuqori bitrateli videolarni ham optimal siqib, round (video note) shakliga keltirishga harakat qiladi.
+    SUPER-ULTRA TEZKOR VIDEO NOTE CONVERTER (480x480, CRF=24, preset=ultrafast, tune=zerolatency, bf=0, threads=0):
+    - Telegram rasmiy Video Note o'lchami (480x480) va super-ultra tezkor koblash.
     """
     ffmpeg_bin = get_ffmpeg_cmd()
     duration = await get_video_duration(input_path)
     logger.info(f"Video davomiyligi aniqlandi: {duration:.2f} soniya")
 
     output_files = []
-    vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=640:640"
+    vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=480:480"
 
     if duration > 60.5:
         logger.info(f"Video 1 minutdan uzun ({duration:.1f}s), qismlarga bo'linmoqda...")
@@ -423,12 +405,14 @@ async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str)
                 "-c:v", "libx264",
                 "-preset", "ultrafast",
                 "-tune", "zerolatency",
-                "-crf", "22",
-                "-maxrate", "2M",
-                "-bufsize", "4M",
+                "-bf", "0",
+                "-g", "30",
+                "-crf", "24",
+                "-maxrate", "1.8M",
+                "-bufsize", "3.6M",
                 "-pix_fmt", "yuv420p",
                 "-c:a", "aac",
-                "-b:a", "128k",
+                "-b:a", "96k",
                 "-threads", "0",
                 "-movflags", "+faststart",
                 part_path
@@ -451,12 +435,14 @@ async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str)
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-tune", "zerolatency",
-            "-crf", "22",
-            "-maxrate", "2M",
-            "-bufsize", "4M",
+            "-bf", "0",
+            "-g", "30",
+            "-crf", "24",
+            "-maxrate", "1.8M",
+            "-bufsize", "3.6M",
             "-pix_fmt", "yuv420p",
             "-c:a", "aac",
-            "-b:a", "128k",
+            "-b:a", "96k",
             "-threads", "0",
             "-movflags", "+faststart",
             part1_path
@@ -797,7 +783,7 @@ async def process_video_action(callback: CallbackQuery):
                     reply_to_message_id=target_msg.message_id
                 )
                 db_increment_stats(user.id, action_type="note")
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.05)
 
             # status xabarini o'chiramiz. Hech qanday "video tayyor" kabi ortiqcha matn yozilmaydi!
             await callback.message.delete()
