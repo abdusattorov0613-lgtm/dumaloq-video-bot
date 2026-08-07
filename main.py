@@ -91,8 +91,14 @@ TEXTS = {
         "btn_note": "🔵 Dumaloq video qilish (Video Note)",
         "btn_audio": "🎵 Ovozini ajratib olish (MP3)",
         "btn_add_group": "➕ Guruhga qo'shish ⤴️",
-        "note_processing": "⚡ <b>Videongiz tayyorlanmoqda...</b>",
-        "audio_processing": "⚡ <b>MP3 audio tayyorlanmoqda...</b>",
+        "note_processing": (
+            "⚡ <b>Videongiz tayyorlanmoqda...</b>\n\n"
+            "<i>Eslatma: Video sifati va hajmi yuqori bo'lsa, bir oz ko'proq vaqt talab qilishi mumkin.</i>"
+        ),
+        "audio_processing": (
+            "⚡ <b>MP3 audio tayyorlanmoqda...</b>\n\n"
+            "<i>Eslatma: Video sifati va hajmi yuqori bo'lsa, bir oz ko'proq vaqt talab qilishi mumkin.</i>"
+        ),
         "err_msg": (
             "⚠️ <b>Videoni hajmini pastroq qilib tashlang!</b>\n\n"
             "Videoning hajmi juda kattaligi yoki uni qayta ishlash imkoni bo'lmagani sababli bajarilmadi.\n"
@@ -128,8 +134,14 @@ TEXTS = {
         "btn_note": "🔵 Сделать круглое видео (Video Note)",
         "btn_audio": "🎵 Извлечь звук (MP3)",
         "btn_add_group": "➕ Добавить в группу ⤴️",
-        "note_processing": "⚡ <b>Ваше видео готовится...</b>",
-        "audio_processing": "⚡ <b>MP3 аудио готовится...</b>",
+        "note_processing": (
+            "⚡ <b>Ваше видео готовится...</b>\n\n"
+            "<i>Примечание: Если качество и объем видео высокие, это может занять немного больше времени.</i>"
+        ),
+        "audio_processing": (
+            "⚡ <b>MP3 аудио готовится...</b>\n\n"
+            "<i>Примечание: Если качество и объем видео высокие, это может занять немного больше времени.</i>"
+        ),
         "err_msg": (
             "⚠️ <b>Пожалуйста, уменьшите размер видео!</b>\n\n"
             "Размер видео слишком большой или его не удалось обработать.\n"
@@ -165,8 +177,14 @@ TEXTS = {
         "btn_note": "🔵 Make Round Video (Video Note)",
         "btn_audio": "🎵 Extract Audio (MP3)",
         "btn_add_group": "➕ Add to Group ⤴️",
-        "note_processing": "⚡ <b>Your video is being prepared...</b>",
-        "audio_processing": "⚡ <b>Extracting MP3 audio...</b>",
+        "note_processing": (
+            "⚡ <b>Your video is being prepared...</b>\n\n"
+            "<i>Note: If the video quality and size are high, processing may take a little extra time.</i>"
+        ),
+        "audio_processing": (
+            "⚡ <b>Extracting MP3 audio...</b>\n\n"
+            "<i>Note: If the video quality and size are high, processing may take a little extra time.</i>"
+        ),
         "err_msg": (
             "⚠️ <b>Please send a video with a smaller file size!</b>\n\n"
             "The video file is too large or could not be processed.\n"
