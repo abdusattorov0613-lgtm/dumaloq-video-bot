@@ -73,7 +73,7 @@ TEXTS = {
         "start": (
             "👋 <b>Xush kelibsiz, {name}!</b>\n\n"
             "Videolaringizni <b>Dumaloq video (Video Note)</b> qilish hamda <b>MP3 audio</b>sini ajratib olishda yordam beraman.\n\n"
-            "📹 <i>Kerakli videongizni yuboring!</i>"
+            "📹 <i>Kerakli videoyingizni yuboring!</i>"
         ),
         "help": (
             "ℹ️ <b>YORDAM VA YO'RIQNOMA</b>\n\n"
@@ -85,14 +85,14 @@ TEXTS = {
         "lang_choose": "🌐 <b>Muloqot tilini tanlang / Choose Language:</b>",
         "lang_set": "✅ Muloqot tili <b>O'zbekcha</b>ga o'zgartirildi!",
         "video_received": (
-            "📹 <b>Videongiz qabul qilindi.</b>\n"
+            "📹 <b>Videoyingiz qabul qilindi.</b>\n"
             "Kerakli bo'limni tanlang 👇"
         ),
         "btn_note": "🔵 Dumaloq video qilish (Video Note)",
         "btn_audio": "🎵 Ovozini ajratib olish (MP3)",
         "btn_add_group": "➕ Guruhga qo'shish ⤴️",
         "note_processing": (
-            "⚡ <b>Videongiz tayyorlanmoqda...</b>\n\n"
+            "⚡ <b>Videoyingiz tayyorlanmoqda...</b>\n\n"
             "<i>Eslatma: Video sifati va hajmi yuqori bo'lsa, bir oz ko'proq vaqt talab qilishi mumkin.</i>"
         ),
         "audio_processing": (
