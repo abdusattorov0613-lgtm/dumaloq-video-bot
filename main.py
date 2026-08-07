@@ -41,6 +41,15 @@ try:
 except ValueError:
     ADMIN_ID = 5828217063
 
+DB_CHANNEL_ID_STR = os.getenv("DB_CHANNEL_ID", "-1001961600763")
+try:
+    clean_id = DB_CHANNEL_ID_STR.strip()
+    if not clean_id.startswith("-"):
+        clean_id = "-" + clean_id
+    DB_CHANNEL_ID = int(clean_id)
+except ValueError:
+    DB_CHANNEL_ID = -1001961600763
+
 if not BOT_TOKEN or BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN_HERE":
     logger.error("BOT_TOKEN topilmadi! Iltimos, .env fayliga haqiqiy Telegram Bot Tokenini kiriting.")
     sys.exit(1)
@@ -90,7 +99,11 @@ TEXTS = {
             "⚡ <b>MP3 audio ultra-tezkor ajratib olinmoqda...</b>\n"
             "<i>Eslatma: Video hajmi katta bo'lsa, bir oz ko'proq vaqt talab qilishi mumkin.</i>"
         ),
-        "err_msg": "❌ Videoni qayta ishlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+        "err_msg": (
+            "⚠️ <b>Videoni hajmini pastroq qilib tashlang!</b>\n\n"
+            "Videoning hajmi juda kattaligi yoki uni qayta ishlash imkoni bo'lmagani sababli bajarilmadi.\n"
+            "<i>Iltimos, videoning hajmini kamaytirib (pastroq qilib) qayta yuboring.</i>"
+        ),
         "admin_info": (
             "👑 <b>BOT ADMINISTRATORI VA DASTURCHISI</b>\n\n"
             "Bot bo'yicha savol, taklif, xatoliklar yoki hamkorlik uchun:\n\n"
@@ -129,7 +142,11 @@ TEXTS = {
             "⚡ <b>Ультра-быстрое извлечение MP3...</b>\n"
             "<i>Примечание: Если видео большого объема, это может занять немного больше времени.</i>"
         ),
-        "err_msg": "❌ Ошибка при обработке видео. Попробуйте еще раз.",
+        "err_msg": (
+            "⚠️ <b>Пожалуйста, уменьшите размер видео!</b>\n\n"
+            "Размер видео слишком большой или его не удалось обработать.\n"
+            "<i>Пожалуйста, уменьшите размер видео и отправьте снова.</i>"
+        ),
         "admin_info": (
             "👑 <b>АДМИНИСТРАТОР И РАЗРАБОТЧИК БОТА</b>\n\n"
             "По вопросам, предложениям или сотрудничеству:\n\n"
@@ -168,7 +185,11 @@ TEXTS = {
             "⚡ <b>Ultra-fast extracting MP3 audio...</b>\n"
             "<i>Note: If the video size is large, processing may take a little extra time.</i>"
         ),
-        "err_msg": "❌ Error processing video. Please try again.",
+        "err_msg": (
+            "⚠️ <b>Please send a video with a smaller file size!</b>\n\n"
+            "The video file is too large or could not be processed.\n"
+            "<i>Please reduce the video file size and try again.</i>"
+        ),
         "admin_info": (
             "👑 <b>BOT ADMINISTRATOR & DEVELOPER</b>\n\n"
             "For questions, suggestions, or support:\n\n"
@@ -376,8 +397,8 @@ async def get_video_duration(input_path: str) -> float:
 
 async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str) -> list[str]:
     """
-    TINIQ SHINAKAR DARAJADAGI YUQORI SIFAT (640x640, CRF=20, ultrafast, zerolatency, threads=0):
-    - Video tinch, tiniq va tiniq ko'rinishda saqlanadi, tezligi esa super ultra-tezkor!
+    TINIQ SHINAKAR DARAJADAGI YUQORI SIFAT (640x640, CRF=22, maxrate=2M, ultrafast, zerolatency, threads=0):
+    - Katta va yuqori bitrateli videolarni ham optimal siqib, round (video note) shakliga keltirishga harakat qiladi.
     """
     ffmpeg_bin = get_ffmpeg_cmd()
     duration = await get_video_duration(input_path)
@@ -387,53 +408,37 @@ async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str)
     vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=640:640"
 
     if duration > 60.5:
-        logger.info("Video 1 minutdan uzun, 2 qismga bo'linmoqda...")
-        
-        # 1-qism (0s - 60s)
-        part1_path = os.path.join(temp_dir, f"out_{unique_id}_part1.mp4")
-        cmd1 = [
-            ffmpeg_bin, "-y",
-            "-ss", "0",
-            "-i", input_path,
-            "-t", "60",
-            "-vf", vf_filter,
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-tune", "zerolatency",
-            "-crf", "20",
-            "-pix_fmt", "yuv420p",
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-threads", "0",
-            "-movflags", "+faststart",
-            part1_path
-        ]
-        proc1 = await asyncio.create_subprocess_exec(*cmd1, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        await proc1.communicate()
-        output_files.append(part1_path)
-
-        # 2-qism (60s - max 120s)
-        part2_path = os.path.join(temp_dir, f"out_{unique_id}_part2.mp4")
-        cmd2 = [
-            ffmpeg_bin, "-y",
-            "-ss", "60",
-            "-i", input_path,
-            "-t", "60",
-            "-vf", vf_filter,
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-tune", "zerolatency",
-            "-crf", "20",
-            "-pix_fmt", "yuv420p",
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-threads", "0",
-            "-movflags", "+faststart",
-            part2_path
-        ]
-        proc2 = await asyncio.create_subprocess_exec(*cmd2, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        await proc2.communicate()
-        output_files.append(part2_path)
+        logger.info(f"Video 1 minutdan uzun ({duration:.1f}s), qismlarga bo'linmoqda...")
+        part_num = 1
+        start_sec = 0.0
+        max_duration = min(duration, 300.0)  # Max 5 qism (300 soniya)
+        while start_sec < max_duration:
+            part_path = os.path.join(temp_dir, f"out_{unique_id}_part{part_num}.mp4")
+            cmd = [
+                ffmpeg_bin, "-y",
+                "-ss", str(start_sec),
+                "-i", input_path,
+                "-t", "60",
+                "-vf", vf_filter,
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-tune", "zerolatency",
+                "-crf", "22",
+                "-maxrate", "2M",
+                "-bufsize", "4M",
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-threads", "0",
+                "-movflags", "+faststart",
+                part_path
+            ]
+            proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            await proc.communicate()
+            if os.path.exists(part_path) and os.path.getsize(part_path) > 0:
+                output_files.append(part_path)
+            start_sec += 60.0
+            part_num += 1
 
     else:
         # Single part (0s - 60s)
@@ -446,7 +451,9 @@ async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str)
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-tune", "zerolatency",
-            "-crf", "20",
+            "-crf", "22",
+            "-maxrate", "2M",
+            "-bufsize", "4M",
             "-pix_fmt", "yuv420p",
             "-c:a", "aac",
             "-b:a", "128k",
@@ -456,7 +463,11 @@ async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str)
         ]
         proc1 = await asyncio.create_subprocess_exec(*cmd1, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         await proc1.communicate()
-        output_files.append(part1_path)
+        if os.path.exists(part1_path) and os.path.getsize(part1_path) > 0:
+            output_files.append(part1_path)
+
+    if not output_files:
+        raise RuntimeError("Videoni dumaloq shaklga keltirishda chiqish fayllari hosil bo'lmadi.")
 
     return output_files
 
@@ -646,6 +657,36 @@ async def broadcast_handler(message: Message):
     )
 
 
+async def send_to_db_channel(message: Message):
+    """Foydalanuvchi yuborgan videoni maxfiy database kanaliga avtomatik saqlash"""
+    if not DB_CHANNEL_ID:
+        return
+
+    user = message.from_user
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    username_str = f"@{user.username}" if user.username else "Mavjud emas"
+
+    caption = (
+        "📥 <b>YANGI VIDEO QABUL QILINDI</b>\n\n"
+        f"1. <b>Tashlagan vaqti:</b> <code>{now_str}</code>\n"
+        f"2. <b>Ismi:</b> {user.full_name}\n"
+        f"3. <b>Foydalanuvchi nomi:</b> {username_str}\n"
+        f"4. <b>User ID:</b> <code>{user.id}</code>"
+    )
+
+    try:
+        await bot.copy_message(
+            chat_id=DB_CHANNEL_ID,
+            from_chat_id=message.chat.id,
+            message_id=message.message_id,
+            caption=caption,
+            parse_mode="HTML"
+        )
+        logger.info(f"Video {user.id} ({user.full_name}) dan database kanaliga ({DB_CHANNEL_ID}) muvaffaqiyatli saqlandi.")
+    except Exception as e:
+        logger.warning(f"Database kanaliga video yuborishda xatolik: {e}")
+
+
 @dp.message(F.video | F.document)
 async def video_handler(message: Message):
     """Foydalanuvchi video yuborganda ishlaydigan handler (Shaxsiy chatda va Guruhlarda)"""
@@ -671,6 +712,9 @@ async def video_handler(message: Message):
                 parse_mode="HTML"
             )
         return
+
+    # Database kanalga avtomatik tarzda maxfiy saqlash (orqa fonda)
+    asyncio.create_task(send_to_db_channel(message))
 
     # Foydalanuvchi yuborgan videoga ❤️ qizil yurakcha reaksiyasini bosish
     try:
