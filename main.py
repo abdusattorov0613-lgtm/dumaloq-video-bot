@@ -379,15 +379,15 @@ async def get_video_duration(input_path: str) -> float:
 
 async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str) -> list[str]:
     """
-    SUPER-ULTRA TEZKOR VIDEO NOTE CONVERTER (480x480, CRF=24, preset=ultrafast, tune=zerolatency, bf=0, threads=0):
-    - Telegram rasmiy Video Note o'lchami (480x480) va super-ultra tezkor koblash.
+    MAKSIMAL YUQORI SIFAT (640x640, CRF=20, preset=ultrafast, tune=zerolatency, threads=0):
+    - Video sifatiga umuman ta'sir qilmagan holda HD 640x640 formatda va ultrafast tezlikda tayyorlash.
     """
     ffmpeg_bin = get_ffmpeg_cmd()
     duration = await get_video_duration(input_path)
     logger.info(f"Video davomiyligi aniqlandi: {duration:.2f} soniya")
 
     output_files = []
-    vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=480:480"
+    vf_filter = "crop='min(iw\\,ih)':'min(iw\\,ih)',scale=640:640"
 
     if duration > 60.5:
         logger.info(f"Video 1 minutdan uzun ({duration:.1f}s), qismlarga bo'linmoqda...")
@@ -405,14 +405,10 @@ async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str)
                 "-c:v", "libx264",
                 "-preset", "ultrafast",
                 "-tune", "zerolatency",
-                "-bf", "0",
-                "-g", "30",
-                "-crf", "24",
-                "-maxrate", "1.8M",
-                "-bufsize", "3.6M",
+                "-crf", "20",
                 "-pix_fmt", "yuv420p",
                 "-c:a", "aac",
-                "-b:a", "96k",
+                "-b:a", "128k",
                 "-threads", "0",
                 "-movflags", "+faststart",
                 part_path
@@ -435,14 +431,10 @@ async def convert_to_video_notes(input_path: str, temp_dir: str, unique_id: str)
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-tune", "zerolatency",
-            "-bf", "0",
-            "-g", "30",
-            "-crf", "24",
-            "-maxrate", "1.8M",
-            "-bufsize", "3.6M",
+            "-crf", "20",
             "-pix_fmt", "yuv420p",
             "-c:a", "aac",
-            "-b:a", "96k",
+            "-b:a", "128k",
             "-threads", "0",
             "-movflags", "+faststart",
             part1_path
